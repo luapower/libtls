@@ -29,27 +29,22 @@ function config:add_keypair_file(cert_file, key_file)
 	return check(self, C.tls_config_add_keypair_file(self, cert_file, key_file))
 end
 
-function config:add_keypair(cert_buf, cert_len, key_buf, key_len)
+function config:add_keypair(cert_buf, cert_size, key_buf, key_size)
 	return check(self, C.tls_config_add_keypair_mem(self,
-		cert_buf, cert_len or #cert_buf,
-		key_buf, key_len or #key_buf))
+		cert_buf, cert_size or #cert_buf,
+		key_buf, key_size or #key_buf))
 end
 
-function config:add_keypair_ocsp_file(cert_file, key_file, ocsp_staple_file)
+function config:add_ocsp_keypair_file(cert_file, key_file, staple_file)
 	return check(self, C.tls_config_add_keypair_ocsp_file(self,
-		cert_file, key_file, ocsp_staple_file))
+		cert_file, key_file, staple_file))
 end
 
-function config:add_keypair_ocsp_file(cert_file, key_file, ocsp_staple_file)
-	return check(self, C.tls_config_add_keypair_ocsp_file(self,
-		cert_file, key_file, ocsp_staple_file))
-end
-
-function config:add_keypair_ocsp(cert_len, key, key_len, staple, staple_len)
+function config:add_ocsp_keypair(cert, cert_size, key, key_size, staple, staple_size)
 	return check(self, C.tls_config_add_keypair_ocsp_mem(self,
-		cert, cert_len or #cert,
-		key, key_len or #key,
-		staple, staple_len or #staple))
+		cert, cert_size or #cert,
+		key, key_size or #key,
+		staple, staple_size or #staple))
 end
 
 function config:set_alpn(alpn)
@@ -64,32 +59,32 @@ function config:set_ca_path(ca_path)
 	return check(self, C.tls_config_set_ca_path(self, ca_path))
 end
 
-function config:set_ca(ca, ca_len)
-	return check(self, C.tls_config_set_ca_mem(self, ca, ca_len or #ca))
+function config:set_ca(ca, ca_size)
+	return check(self, C.tls_config_set_ca_mem(self, ca, ca_size or #ca))
 end
 
 function config:set_cert_file(cert_file)
 	return check(self, C.tls_config_set_cert_file(self, cert_file))
 end
 
-function config:set_cert(cert, cert_len)
-	return check(self, C.tls_config_set_cert_mem(self, cert, cert_len or #cert))
+function config:set_cert(cert, cert_size)
+	return check(self, C.tls_config_set_cert_mem(self, cert, cert_size or #cert))
 end
 
-function config:add_ticket_key(keyrev, key, keylen)
-	return check(self, C.tls_config_add_ticket_key(self, keyrev, key, keylen or #key))
+function config:add_ticket_key(keyrev, key, key_size)
+	return check(self, C.tls_config_add_ticket_key(self, keyrev, key, key_size or #key))
 end
 
 function config:set_ciphers(ciphers)
 	return check(self, C.tls_config_set_ciphers(self, ciphers))
 end
 
-function config:set_crl_file(crl_file)
-	return check(self, C.tls_config_set_crl_file(self, crl_file))
+function config:set_crl_file(file)
+	return check(self, C.tls_config_set_crl_file(self, file))
 end
 
-function config:set_crl(crl, len)
-	return check(self, C.tls_config_set_crl_mem(self, crl, len or #crl))
+function config:set_crl(crl, sz)
+	return check(self, C.tls_config_set_crl_mem(self, crl, sz or #crl))
 end
 
 function config:set_dheparams(params)
@@ -108,33 +103,33 @@ function config:set_key_file(key_file)
 	return check(self, C.tls_config_set_key_file(self, key_file))
 end
 
-function config:set_key(key, len)
-	return check(self, C.tls_config_set_key_mem(self, key, len or #key))
+function config:set_key(key, sz)
+	return check(self, C.tls_config_set_key_mem(self, key, sz or #key))
 end
 
 function config:set_keypair_file(cert_file, key_file)
 	return check(self, C.tls_config_set_keypair_file(self, cert_file, key_file))
 end
 
-function config:set_keypair(cert, cert_len, key, key_len)
+function config:set_keypair(cert, cert_size, key, key_size)
 	return check(self, C.tls_config_set_keypair_mem(self,
-		cert, cert_len or #cert,
-		key, key_len or #key))
+		cert, cert_size or #cert,
+		key, key_size or #key))
 end
 
-function config:set_keypair_ocsp_file(cert_file, key_file, staple_file)
+function config:set_ocsp_keypair_file(cert_file, key_file, staple_file)
 	return check(self, C.tls_config_set_keypair_ocsp_file(self, cert_file, key_file, staple_file))
 end
 
-function config:set_keypair_ocsp(cert, cert_len, key, key_len, staple, staple_len)
+function config:set_ocsp_keypair(cert, cert_size, key, key_size, staple, staple_size)
 	return check(self, C.tls_config_set_keypair_ocsp_mem(self, cert,
-		 cert_len or #cert,
-		 key, key_len or #key,
-		 staple, staple_len or #staple))
+		 cert_size or #cert,
+		 key, key_size or #key,
+		 staple, staple_size or #staple))
 end
 
-function config:set_ocsp_staple(staple, len)
-	return check(self, C.tls_config_set_ocsp_staple_mem(self, staple, len or #staple))
+function config:set_ocsp_staple(staple, sz)
+	return check(self, C.tls_config_set_ocsp_staple_mem(self, staple, sz or #staple))
 end
 
 function config:set_ocsp_staple_file(staple_file)
@@ -176,8 +171,8 @@ function config:parse_protocols(protostr)
 	return proto_buf[0]
 end
 
-function config:set_session_id(session_id, len)
-	return check(self, C.tls_config_set_session_id(self, session_id, len or #session_id))
+function config:set_session_id(session_id, sz)
+	return check(self, C.tls_config_set_session_id(self, session_id, sz or #session_id))
 end
 
 function config:set_session_lifetime(lifetime)
@@ -212,14 +207,63 @@ do
 		return true
 	end
 
+	local E = false
 	local args = {
-		{add, 'keypair_files', {'cert_file', 'key_file'}, config.add_keypair},
-		{add, 'keypairs', {'cert', 'cert_size', 'key', 'key_size'}, config.add_keypair},
-		{set, 'ca_file', {'file'}, config.set_ca_file},
-		{set, 'ca_path', {'path'}, config.set_ca_path},
-		{set, 'ca', {'data', 'size'}, config.set_ca},
-		{set, 'cert_file', {'file'}, config.set_cert_file},
-		{set, 'cert', {'data', 'size'}, config.set_cert},
+		{add, 'keypair_files'      , config.add_keypair           , 'cert_file', 'key_file'},
+		{add, 'keypairs'           , config.add_keypair           , 'cert', 'cert_size', 'key', 'key_size'},
+		{add, 'ocsp_keypair_files' , config.add_ocsp_keypair_file , 'cert_file', 'key_file', 'staple_file'},
+		{add, 'ocsp_keypairs'      , config.add_ocsp_keypair      , 'cert', 'cert_size', 'key', 'key_size', 'staple', 'staple_size'},
+		{set, 'alpn'               , config.set_alpn},
+		{set, 'ca_file'            , config.set_ca_file},
+		{set, 'ca_path'            , config.set_ca_path},
+		{set, 'ca'                 , config.set_ca, 'data', 'size'},
+		{set, 'cert_file'          , config.set_cert_file},
+		{set, 'cert'               , config.set_cert, 'data', 'size'},
+		{add, 'ticket_key'         , config.add_ticket_key, {'keyrev', 'key', 'key_size'},
+		{set, 'ciphers', E, config.set_ciphers},
+		{set, 'crl_file', E, config.set_crl_file},
+		{set, 'crl', {'data', 'size'}, config.set_crl},
+		{set, 'dheparams', E, config.set_dheparams},
+		{set, 'ecdhecurve', E, config.set_ecdhecurve},
+		{set, 'ecdhecurves', E, config.set_ecdhecurves},
+		{set, 'key_file', E, config.set_key_file},
+		{set, 'key', {'data', 'size'}, config.set_key},
+		{set, 'keypair_file', {'cert_file', 'key_file'}, config.set_keypair_file},
+		{set, 'keypair', {'cert', 'cert_size', 'key', 'key_size', config.set_keypair},
+		{set, 'ocsp_keypair_file', {'cert_file', 'key_file', 'staple_file'},
+		{set, 'ocsp_keypair', {'cert', 'cert_size', 'key', 'key_size', 'staple', 'staple_size'}, config.set_ocsp_keypair},
+		{set, 'ocsp_staple', {'data', 'size'}, config.set_ocsp_staple},
+		{set, 'ocsp_staple_file', E, config.set_ocsp_staple_file},
+		{set, 'protocols', E, config.set_protocols,
+		{set, 'session_fd', E, config.set_session_fd},
+		{set, 'verify_depth', E, config.set_verify_depth},
+
+		config.prefer_ciphers_client  = C.tls_config_prefer_ciphers_client
+		config.prefer_ciphers_server  = C.tls_config_prefer_ciphers_server
+		config.insecure_noverifycert  = C.tls_config_insecure_noverifycert
+		config.insecure_noverifyname  = C.tls_config_insecure_noverifyname
+		config.insecure_noverifytime  = C.tls_config_insecure_noverifytime
+		config.verify                 = C.tls_config_verify
+		config.ocsp_require_stapling  = C.tls_config_ocsp_require_stapling
+		config.verify_client          = C.tls_config_verify_client
+		config.verify_client_optional = C.tls_config_verify_client_optional
+		config.clear_keys             = C.tls_config_clear_keys
+
+		local proto_buf = ffi.new'uint32_t[1]'
+		function config:parse_protocols(protostr)
+			local ok, err = check(self, C.tls_config_parse_protocols(proto_buf, protostr))
+			if not ok then return nil, err end
+			return proto_buf[0]
+		end
+
+		function config:set_session_id(session_id, len)
+			return check(self, C.tls_config_set_session_id(self, session_id, len or #session_id))
+		end
+
+		function config:set_session_lifetime(lifetime)
+			return check(self, C.tls_config_set_session_lifetime(self, lifetime))
+		end
+
 	}
 
 	function config:set(t)
