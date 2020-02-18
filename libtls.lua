@@ -1,3 +1,7 @@
+
+--libtls binding.
+--Written by Cosmin Apreutesei. Public Domain.
+
 local ffi = require'ffi'
 require'libtls_h'
 local C = ffi.load'tls_bearssl'
