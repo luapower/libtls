@@ -1,3 +1,4 @@
+--tls.h v1.58
 local ffi = require'ffi'
 ffi.cdef[[
 typedef size_t time_t;

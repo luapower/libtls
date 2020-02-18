@@ -22,25 +22,15 @@ config.free = C.tls_config_free
 
 local function check(c, ret)
 	if ret == 0 then return true end
-	return nil, str(C.tls_config_error(c))
+	return nil, str(C.tls_config_error(c)) or 'unknown error'
 end
 
-function config:add_keypair_file(cert_file, key_file)
-	return check(self, C.tls_config_add_keypair_file(self, cert_file, key_file))
-end
-
-function config:add_keypair(cert_buf, cert_size, key_buf, key_size)
-	return check(self, C.tls_config_add_keypair_mem(self,
-		cert_buf, cert_size or #cert_buf,
-		key_buf, key_size or #key_buf))
-end
-
-function config:add_ocsp_keypair_file(cert_file, key_file, staple_file)
+function config:add_keypair_file(cert_file, key_file, staple_file)
 	return check(self, C.tls_config_add_keypair_ocsp_file(self,
 		cert_file, key_file, staple_file))
 end
 
-function config:add_ocsp_keypair(cert, cert_size, key, key_size, staple, staple_size)
+function config:add_keypair(cert, cert_size, key, key_size, staple, staple_size)
 	return check(self, C.tls_config_add_keypair_ocsp_mem(self,
 		cert, cert_size or #cert,
 		key, key_size or #key,
@@ -61,14 +51,6 @@ end
 
 function config:set_ca(ca, ca_size)
 	return check(self, C.tls_config_set_ca_mem(self, ca, ca_size or #ca))
-end
-
-function config:set_cert_file(cert_file)
-	return check(self, C.tls_config_set_cert_file(self, cert_file))
-end
-
-function config:set_cert(cert, cert_size)
-	return check(self, C.tls_config_set_cert_mem(self, cert, cert_size or #cert))
 end
 
 function config:add_ticket_key(keyrev, key, key_size)
@@ -101,39 +83,6 @@ end
 
 function config:set_key_file(key_file)
 	return check(self, C.tls_config_set_key_file(self, key_file))
-end
-
-function config:set_key(key, sz)
-	return check(self, C.tls_config_set_key_mem(self, key, sz or #key))
-end
-
-function config:set_keypair_file(cert_file, key_file)
-	return check(self, C.tls_config_set_keypair_file(self, cert_file, key_file))
-end
-
-function config:set_keypair(cert, cert_size, key, key_size)
-	return check(self, C.tls_config_set_keypair_mem(self,
-		cert, cert_size or #cert,
-		key, key_size or #key))
-end
-
-function config:set_ocsp_keypair_file(cert_file, key_file, staple_file)
-	return check(self, C.tls_config_set_keypair_ocsp_file(self, cert_file, key_file, staple_file))
-end
-
-function config:set_ocsp_keypair(cert, cert_size, key, key_size, staple, staple_size)
-	return check(self, C.tls_config_set_keypair_ocsp_mem(self, cert,
-		 cert_size or #cert,
-		 key, key_size or #key,
-		 staple, staple_size or #staple))
-end
-
-function config:set_ocsp_staple(staple, sz)
-	return check(self, C.tls_config_set_ocsp_staple_mem(self, staple, sz or #staple))
-end
-
-function config:set_ocsp_staple_file(staple_file)
-	return check(self, C.tls_config_set_ocsp_staple_file(self, staple_file))
 end
 
 function config:set_protocols(protocols)
@@ -180,97 +129,68 @@ function config:set_session_lifetime(lifetime)
 end
 
 do
-	local function set(self, t, fields, set_method)
-		if not t then return true end
-		local args
-		if type(t) == 'table' then
-			if #t > 0 then
-				args = t
-			else
-				args = {}
-				for i,field in ipairs(fields) do
-					args[i] = t[field]
-				end
-			end
-		else
-			args = {t}
+	local function barg(set_method)
+		return function(self, arg)
+			if not arg then return true end
+			return set_method(self)
 		end
-		return set_method(self, unpack(args))
 	end
 
-	local function add(self, t, fields, add_method)
-		if not t then return true end
-		for i,t in ipairs(t) do
-			local ok, err = set(t, fields, add_method)
-			if not ok then return nil, err end
-		end
-		return true
-	end
-
-	local E = false
-	local args = {
-		{add, 'keypair_files'      , config.add_keypair           , 'cert_file', 'key_file'},
-		{add, 'keypairs'           , config.add_keypair           , 'cert', 'cert_size', 'key', 'key_size'},
-		{add, 'ocsp_keypair_files' , config.add_ocsp_keypair_file , 'cert_file', 'key_file', 'staple_file'},
-		{add, 'ocsp_keypairs'      , config.add_ocsp_keypair      , 'cert', 'cert_size', 'key', 'key_size', 'staple', 'staple_size'},
-		{set, 'alpn'               , config.set_alpn},
-		{set, 'ca_file'            , config.set_ca_file},
-		{set, 'ca_path'            , config.set_ca_path},
-		{set, 'ca'                 , config.set_ca, 'data', 'size'},
-		{set, 'cert_file'          , config.set_cert_file},
-		{set, 'cert'               , config.set_cert, 'data', 'size'},
-		{add, 'ticket_key'         , config.add_ticket_key, {'keyrev', 'key', 'key_size'},
-		{set, 'ciphers', E, config.set_ciphers},
-		{set, 'crl_file', E, config.set_crl_file},
-		{set, 'crl', {'data', 'size'}, config.set_crl},
-		{set, 'dheparams', E, config.set_dheparams},
-		{set, 'ecdhecurve', E, config.set_ecdhecurve},
-		{set, 'ecdhecurves', E, config.set_ecdhecurves},
-		{set, 'key_file', E, config.set_key_file},
-		{set, 'key', {'data', 'size'}, config.set_key},
-		{set, 'keypair_file', {'cert_file', 'key_file'}, config.set_keypair_file},
-		{set, 'keypair', {'cert', 'cert_size', 'key', 'key_size', config.set_keypair},
-		{set, 'ocsp_keypair_file', {'cert_file', 'key_file', 'staple_file'},
-		{set, 'ocsp_keypair', {'cert', 'cert_size', 'key', 'key_size', 'staple', 'staple_size'}, config.set_ocsp_keypair},
-		{set, 'ocsp_staple', {'data', 'size'}, config.set_ocsp_staple},
-		{set, 'ocsp_staple_file', E, config.set_ocsp_staple_file},
-		{set, 'protocols', E, config.set_protocols,
-		{set, 'session_fd', E, config.set_session_fd},
-		{set, 'verify_depth', E, config.set_verify_depth},
-
-		config.prefer_ciphers_client  = C.tls_config_prefer_ciphers_client
-		config.prefer_ciphers_server  = C.tls_config_prefer_ciphers_server
-		config.insecure_noverifycert  = C.tls_config_insecure_noverifycert
-		config.insecure_noverifyname  = C.tls_config_insecure_noverifyname
-		config.insecure_noverifytime  = C.tls_config_insecure_noverifytime
-		config.verify                 = C.tls_config_verify
-		config.ocsp_require_stapling  = C.tls_config_ocsp_require_stapling
-		config.verify_client          = C.tls_config_verify_client
-		config.verify_client_optional = C.tls_config_verify_client_optional
-		config.clear_keys             = C.tls_config_clear_keys
-
-		local proto_buf = ffi.new'uint32_t[1]'
-		function config:parse_protocols(protostr)
-			local ok, err = check(self, C.tls_config_parse_protocols(proto_buf, protostr))
-			if not ok then return nil, err end
-			return proto_buf[0]
-		end
-
-		function config:set_session_id(session_id, len)
-			return check(self, C.tls_config_set_session_id(self, session_id, len or #session_id))
-		end
-
-		function config:set_session_lifetime(lifetime)
-			return check(self, C.tls_config_set_session_lifetime(self, lifetime))
-		end
-
+	local keys = {
+		{'alpn'                  , config.set_alpn},
+		{'ca_file'               , config.set_ca_file},
+		{'ca_path'               , config.set_ca_path},
+		{'ca'                    , config.set_ca, true},
+		{'ciphers'               , config.set_ciphers},
+		{'crl_file'              , config.set_crl_file},
+		{'crl'                   , config.set_crl, true},
+		{'dheparams'             , config.set_dheparams},
+		{'ecdhecurve'            , config.set_ecdhecurve},
+		{'ecdhecurves'           , config.set_ecdhecurves},
+		{'protocols'             , config.set_protocols},
+		{'session_fd'            , config.set_session_fd},
+		{'verify_depth'          , config.set_verify_depth},
+		{'session_id'            , config.set_session_id, true},
+		{'session_lifetime'      , config.set_session_lifetime},
+		{'prefer_ciphers_client' , barg(config.prefer_ciphers_client)},
+		{'prefer_ciphers_server' , barg(config.prefer_ciphers_server)},
+		{'insecure_noverifycert' , barg(config.insecure_noverifycert)},
+		{'insecure_noverifyname' , barg(config.insecure_noverifyname)},
+		{'insecure_noverifytime' , barg(config.insecure_noverifytime)},
+		{'ocsp_require_stapling' , barg(config.ocsp_require_stapling)},
+		{'verify'                , barg(config.verify)},
+		{'verify_client'         , barg(config.verify_client)},
+		{'verify_client_optional', barg(config.verify_client_optional)},
 	}
 
 	function config:set(t)
-		for i,a in ipairs(args) do
-			local set, k, fields, set_method = unpack(a)
-			local ok, err = set(self, t[k], fields, set_method)
+		if #t > 0 then
+			for _,t in ipairs(t) do
+				local ok, err = self:set(t)
+				if not ok then return nil, err end
+			end
+			return true
+		end
+		if t.cert_file then
+			local ok, err = self:add_keypair_file(t.cert_file, t.key_file, t.ocsp_staple_file)
 			if not ok then return nil, err end
+		end
+		if t.cert then
+			local ok, err = self:add_keypair(t.cert, t.cert_size, t.key, t.key_size, t.ocsp_staple, t.ocsp_staple_size)
+			if not ok then return nil, err end
+		end
+		if t.ticket_key then
+			local ok, err = self:add_ticket_key(t.ticket_key_rev, t.ticket_key, t.ticket_key_size)
+			if not ok then return nil, err end
+		end
+		for i,kt in ipairs(keys) do
+			local k, set_method, is_str = unpack(kt)
+			local v = t[k]
+			if v ~= nil then
+				local sz = is_str and (t[k..'_size'] or #k) or nil
+				local ok, err = set_method(self, v, sz)
+				if not ok then return nil, err end
+			end
 		end
 		return true
 	end
