@@ -14,8 +14,20 @@ local function str(s) return s ~= nil and ffi.string(s) or nil end
 
 local config = {}
 
-function M.config()
-	return assert(ptr(C.tls_config_new()))
+function M.config(conf)
+	if ffi.istype('struct tls_config', conf) then
+		return conf --pass-through
+	end
+	local self = assert(ptr(C.tls_config_new()))
+	self:verify() --default, so `insecure_*` options must be set explicitly.
+	if conf then
+		local ok, err = self:set(conf)
+		if not ok then
+			self:free()
+			error(err)
+		end
+	end
+	return self, true
 end
 
 config.free = C.tls_config_free
@@ -23,11 +35,6 @@ config.free = C.tls_config_free
 local function check(c, ret)
 	if ret == 0 then return true end
 	return nil, str(C.tls_config_error(c)) or 'unknown error'
-end
-
-function config:add_keypair_file(cert_file, key_file, staple_file)
-	return check(self, C.tls_config_add_keypair_ocsp_file(self,
-		cert_file, key_file, staple_file))
 end
 
 function config:add_keypair(cert, cert_size, key, key_size, staple, staple_size)
@@ -41,14 +48,6 @@ function config:set_alpn(alpn)
 	return check(self, C.tls_config_set_alpn(self, alpn))
 end
 
-function config:set_ca_file(ca_file)
-	return check(self, C.tls_config_set_ca_file(self, ca_file))
-end
-
-function config:set_ca_path(ca_path)
-	return check(self, C.tls_config_set_ca_path(self, ca_path))
-end
-
 function config:set_ca(ca, ca_size)
 	return check(self, C.tls_config_set_ca_mem(self, ca, ca_size or #ca))
 end
@@ -59,10 +58,6 @@ end
 
 function config:set_ciphers(ciphers)
 	return check(self, C.tls_config_set_ciphers(self, ciphers))
-end
-
-function config:set_crl_file(file)
-	return check(self, C.tls_config_set_crl_file(self, file))
 end
 
 function config:set_crl(crl, sz)
@@ -90,24 +85,26 @@ function config:set_protocols(protocols)
 	return check(self, C.tls_config_set_protocols(self, protocols))
 end
 
-function config:set_session_fd(session_fd)
-	return check(self, C.tls_config_set_session_fd(self, session_fd))
-end
-
 function config:set_verify_depth(verify_depth)
 	return check(self, C.tls_config_set_verify_depth(self, verify_depth))
 end
 
-config.prefer_ciphers_client  = C.tls_config_prefer_ciphers_client
-config.prefer_ciphers_server  = C.tls_config_prefer_ciphers_server
-config.insecure_noverifycert  = C.tls_config_insecure_noverifycert
-config.insecure_noverifyname  = C.tls_config_insecure_noverifyname
-config.insecure_noverifytime  = C.tls_config_insecure_noverifytime
-config.verify                 = C.tls_config_verify
-config.ocsp_require_stapling  = C.tls_config_ocsp_require_stapling
-config.verify_client          = C.tls_config_verify_client
-config.verify_client_optional = C.tls_config_verify_client_optional
-config.clear_keys             = C.tls_config_clear_keys
+local function return_true(f)
+	return function(self)
+		f(self)
+		return true
+	end
+end
+config.prefer_ciphers_client  = return_true(C.tls_config_prefer_ciphers_client)
+config.prefer_ciphers_server  = return_true(C.tls_config_prefer_ciphers_server)
+config.insecure_noverifycert  = return_true(C.tls_config_insecure_noverifycert)
+config.insecure_noverifyname  = return_true(C.tls_config_insecure_noverifyname)
+config.insecure_noverifytime  = return_true(C.tls_config_insecure_noverifytime)
+config.verify                 = return_true(C.tls_config_verify)
+config.ocsp_require_stapling  = return_true(C.tls_config_ocsp_require_stapling)
+config.verify_client          = return_true(C.tls_config_verify_client)
+config.verify_client_optional = return_true(C.tls_config_verify_client_optional)
+config.clear_keys             = return_true(C.tls_config_clear_keys)
 
 local proto_buf = ffi.new'uint32_t[1]'
 function config:parse_protocols(protostr)
@@ -133,30 +130,28 @@ do
 	end
 
 	local keys = {
-		{'alpn'                  , config.set_alpn},
-		{'ca_file'               , config.set_ca_file},
-		{'ca_path'               , config.set_ca_path},
 		{'ca'                    , config.set_ca, true},
 		{'ciphers'               , config.set_ciphers},
-		{'crl_file'              , config.set_crl_file},
-		{'crl'                   , config.set_crl, true},
+		{'alpn'                  , config.set_alpn},
 		{'dheparams'             , config.set_dheparams},
 		{'ecdhecurve'            , config.set_ecdhecurve},
 		{'ecdhecurves'           , config.set_ecdhecurves},
 		{'protocols'             , config.set_protocols},
-		{'session_fd'            , config.set_session_fd},
-		{'verify_depth'          , config.set_verify_depth},
-		{'session_id'            , config.set_session_id, true},
-		{'session_lifetime'      , config.set_session_lifetime},
 		{'prefer_ciphers_client' , barg(config.prefer_ciphers_client)},
 		{'prefer_ciphers_server' , barg(config.prefer_ciphers_server)},
 		{'insecure_noverifycert' , barg(config.insecure_noverifycert)},
 		{'insecure_noverifyname' , barg(config.insecure_noverifyname)},
 		{'insecure_noverifytime' , barg(config.insecure_noverifytime)},
-		{'ocsp_require_stapling' , barg(config.ocsp_require_stapling)},
 		{'verify'                , barg(config.verify)},
 		{'verify_client'         , barg(config.verify_client)},
 		{'verify_client_optional', barg(config.verify_client_optional)},
+		{'verify_depth'          , config.set_verify_depth},
+		{'ocsp_require_stapling' , barg(config.ocsp_require_stapling)},
+		--NOTE: CRL not supported by BearSSL (but supported by LibreSSL).
+		{'crl'                   , config.set_crl, true},
+		--TODO: add sessions to libtls-bearssl.
+		{'session_id'            , config.set_session_id, true},
+		{'session_lifetime'      , config.set_session_lifetime},
 	}
 
 	function config:set(t)
@@ -165,18 +160,16 @@ do
 				local ok, err = self:set(t)
 				if not ok then return nil, err end
 			end
-			return true
-		end
-		if t.cert_file then
-			local ok, err = self:add_keypair_file(t.cert_file, t.key_file, t.ocsp_staple_file)
-			if not ok then return nil, err end
 		end
 		if t.cert then
-			local ok, err = self:add_keypair(t.cert, t.cert_size, t.key, t.key_size, t.ocsp_staple, t.ocsp_staple_size)
+			local ok, err = self:add_keypair(
+				t.cert, t.cert_size, t.key, t.key_size,
+				t.ocsp_staple, t.ocsp_staple_size)
 			if not ok then return nil, err end
 		end
-		if t.ticket_key then
-			local ok, err = self:add_ticket_key(t.ticket_key_rev, t.ticket_key, t.ticket_key_size)
+		if t.ticket_key then --NOTE: session tickets not supported by BearSSL.
+			local ok, err = self:add_ticket_key(
+				t.ticket_key_rev, t.ticket_key, t.ticket_key_size)
 			if not ok then return nil, err end
 		end
 		for i,kt in ipairs(keys) do
@@ -202,23 +195,30 @@ end
 local tls = {}
 
 function tls:configure(conf)
-	return check(self, C.tls_configure(self, conf))
+	if conf then
+		local conf, created = M.config(conf)
+		local ok, err = check(self, C.tls_configure(self, conf))
+		if created then conf:free() end --self holds the only ref now.
+		assert(ok, err)
+	end
+	return self
 end
 
-function M.client()
-	return assert(ptr(C.tls_client()))
+function M.client(conf)
+	return assert(ptr(C.tls_client())):configure(conf)
 end
 
-function M.server(config)
-	return assert(ptr(C.tls_server()))
+function M.server(conf)
+	return assert(ptr(C.tls_server())):configure(conf)
 end
 
-function tls:reset()
-	return check(self, C.tls_reset(self))
+function tls:reset(conf)
+	C.tls_reset(self)
+	return self:configure(conf)
 end
 
 function tls:free()
-	return check(self, C.tls_free(self))
+	C.tls_free(self)
 end
 
 function tls:accept(cctx, read_cb, write_cb, cb_arg)
