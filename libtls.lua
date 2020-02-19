@@ -81,10 +81,6 @@ function config:set_ecdhecurves(curves)
 	return check(self, C.tls_config_set_ecdhecurves(self, curves))
 end
 
-function config:set_key_file(key_file)
-	return check(self, C.tls_config_set_key_file(self, key_file))
-end
-
 function config:set_protocols(protocols)
 	local err
 	if type(protocols) == 'string' then
