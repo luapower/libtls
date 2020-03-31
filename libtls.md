@@ -1,6 +1,13 @@
 
 ## `local tls = require'libtls'`
 
+libtls ffi binding. Use it with luapower's [libtls_bearssl] and [bearssl]
+or with your own libressl binary.
+
+## Status
+
+<warn>Work in progress</warn>
+
 ## API
 
 ------------------------------------------------- ----------------------------
