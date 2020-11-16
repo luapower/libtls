@@ -29,20 +29,5 @@ local c = tls.client{
 	verify_client_optional = true,
 }
 
-local function checkio(self, ret)
-	if ret == C.TLS_WANT_POLLIN then
-		--
-	elseif ret == C.TLS_WANT_POLLOUT then
-		--
-	end
-end
-
-local read_cb = ffi.cast('tls_read_cb', function(self, buf, buf_sz, cb_arg)
-	return C.TLS_WANT_POLLIN
-end)
-
-local write_cb = ffi.cast('tls_write_cb', function(self, buf, buf_sz, cb_arg)
-	return C.TLS_WANT_POLLOUT
-end)
 
 c:free()

@@ -44,10 +44,8 @@ enum {
 struct tls;
 struct tls_config;
 
-typedef ssize_t (*tls_read_cb)(struct tls *_ctx, void *_buf, size_t _buflen,
-    void *_cb_arg);
-typedef ssize_t (*tls_write_cb)(struct tls *_ctx, const void *_buf,
-    size_t _buflen, void *_cb_arg);
+typedef ssize_t (*tls_read_cb )(struct tls *_ctx, char *_buf, size_t _buflen, void *_cb_arg);
+typedef ssize_t (*tls_write_cb)(struct tls *_ctx, char *_buf, size_t _buflen, void *_cb_arg);
 
 int tls_init(void);
 

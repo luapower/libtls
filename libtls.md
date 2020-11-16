@@ -4,6 +4,12 @@
 libtls ffi binding. Use it with luapower's [libtls_bearssl] and [bearssl]
 or with your own libressl binary.
 
+## Rationale
+
+libtls has a sane API as opposed to OpenSSL which was written by monkeys.
+libtls doesn't force us to do I/O in its callbacks which we can't do
+anyway because we can't yield from C callbacks.
+
 ## Status
 
 <warn>Work in progress</warn>
@@ -14,39 +20,7 @@ or with your own libressl binary.
 __configuration__
 `tls.config() -> conf`                            create a shared config object
 `conf:free()`                                     free the config object
-`conf:set{opt->val}`                              set options in bulk
-
-	alpn = '123',
-	--ca_file = 'xx',
-	--ca_path = 'x:/',
-	ca = 'x',
-	--ciphers = 'P-256',
-	--crl_file = 'x',
-	--crl = 'x',
-	--dheparams = 'a',
-	--ecdhecurve = 'x',
-	--ecdhecurves = 'z,y',
-	ocsp_staple = 'x',
-	ocsp_staple_file = 'x',
-	--protocols = 'x',
-	verify_depth = true,
-
-	--sessions are not supported by BearSSL
-	--session_fd = 1,
-	--session_id = '1',
-	--session_lifetime = 1,
-
-	prefer_ciphers_client  = true,
-	prefer_ciphers_server  = true,
-	insecure_noverifycert  = true,
-	insecure_noverifyname  = true,
-	insecure_noverifytime  = true,
-	ocsp_require_stapling  = true,
-	verify                 = true,
-	verify_client          = true,
-	verify_client_optional = true,
-
-
+`conf:set{opt->val,{opt->val},...}`               set options in bulk
 `conf:add_keypair_file(cert_file, key_file, [staple_file])`
 `conf:add_keypair(cert, [cert_size], key, [key_size], [staple], [staple_size])`
 `conf:add_ticket_key(keyrev, key, [key_size])`
@@ -74,9 +48,18 @@ __configuration__
 `conf:verify_client()`
 `conf:verify_client_optional()`
 `conf:parse_protocols(protostr)`
-`conf:set_session_fd(session_fd)`                 NYI:
-`conf:set_session_id(session_id, sz)`             NYI:
-`conf:set_session_lifetime(lifetime)`             NYI:
+`conf:set_session_fd(session_fd)`                 NYI
+`conf:set_session_id(session_id, sz)`             NYI
+`conf:set_session_lifetime(lifetime)`             NYI
 __operation__
-
+`tls.client(conf) -> ts`
+`tls.server(conf) -> ts`
+`ts:configure(conf)`
+`ts:reset(conf)`
+`ts:free()`
+`ts:accept(cctx, read_cb, write_cb, cb_arg)`
+`ts:connect(vhost, read_cb, write_cb, cb_arg)`
+`ts:recv(buf, sz)`
+`ts:send(buf, sz)`
+`ts:close()`
 ------------------------------------------------- ----------------------------

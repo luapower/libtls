@@ -32,9 +32,9 @@ end
 
 config.free = C.tls_config_free
 
-local function check(c, ret)
+local function check(self, ret)
 	if ret == 0 then return true end
-	return nil, str(C.tls_config_error(c)) or 'unknown error'
+	return nil, str(C.tls_config_error(self)) or 'unknown tls config error'
 end
 
 function config:add_keypair(cert, cert_size, key, key_size, staple, staple_size)
@@ -187,9 +187,9 @@ end
 
 ffi.metatype('struct tls_config', {__index = config})
 
-local function check(c, ret)
+local function check(self, ret)
 	if ret == 0 then return true end
-	return nil, str(C.tls_error(c))
+	return nil, str(C.tls_error(self)) or 'unknown tls error'
 end
 
 local tls = {}
@@ -225,20 +225,24 @@ function tls:accept(cctx, read_cb, write_cb, cb_arg)
 	return check(self, C.tls_accept_cbs(self, cctx, read_cb, write_cb, cb_arg))
 end
 
-function tls:connect(servername, read_cb, write_cb, cb_arg)
-	return check(self, C.tls_connect_cbs(self, read_cb, write_cb, cb_arg, servername))
+function tls:connect(vhost, read_cb, write_cb, cb_arg)
+	return check(self, C.tls_connect_cbs(self, read_cb, write_cb, cb_arg, vhost))
 end
 
-function tls:handshake()
-	return check(self, C.tls_handshake(self))
+local function checklen(self, ret)
+	ret = tonumber(ret)
+	if ret >= 0 then return ret end
+	if ret == C.TLS_WANT_POLLIN  then return nil, 'wantrecv' end
+	if ret == C.TLS_WANT_POLLOUT then return nil, 'wantsend' end
+	return nil, str(C.tls_error(self))
 end
 
-function tls:read(buf, sz)
-	return check(self, C.tls_read(self, buf, sz))
+function tls:recv(buf, sz)
+	return checklen(self, C.tls_read(self, buf, sz))
 end
 
-function tls:write(buf, sz)
-	return check(self, C.tls_write(self, buf, sz or #buf))
+function tls:send(buf, sz)
+	return checklen(self, C.tls_write(self, buf, sz or #buf))
 end
 
 function tls:close()
