@@ -6,7 +6,7 @@ if not ... then require'libtls_test'; return end
 
 local ffi = require'ffi'
 require'libtls_h'
-local C = ffi.load'tls_bearssl'
+local C = ffi.load(ffi.tls_libname or 'tls_bearssl')
 local M = {C = C}
 
 local function ptr(p) return p ~= nil and p or nil end

@@ -1,18 +1,17 @@
 
 ## `local tls = require'libtls'`
 
-libtls ffi binding. Use it with luapower's [libtls_bearssl] and [bearssl]
-or with your own libressl binary.
+libtls ffi binding. Use it with [libtls_bearssl] or with your own LibreSSL binary.
 
 ## Rationale
 
 libtls has a sane API as opposed to OpenSSL which was written by monkeys.
-libtls doesn't force us to do I/O in its callbacks which we can't do
-anyway because we can't yield from C callbacks.
+libtls doesn't force us to do I/O in its callbacks which allows us to yield in I/O.
+libtls works on user-provided I/O as opposed to LuaSec which uses sockets directly.
 
 ## Status
 
-<warn>Work in progress</warn>
+Works for me.
 
 ## API
 
