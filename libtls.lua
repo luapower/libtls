@@ -176,7 +176,7 @@ do
 			local k, set_method, is_str = unpack(kt)
 			local v = t[k]
 			if v ~= nil then
-				local sz = is_str and (t[k..'_size'] or #k) or nil
+				local sz = is_str and (t[k..'_size'] or #v) or nil
 				local ok, err = set_method(self, v, sz)
 				if not ok then return nil, err end
 			end
