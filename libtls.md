@@ -15,11 +15,11 @@ Works for me.
 
 ## API
 
-------------------------------------------------- ----------------------------
+---------------------------------------------------------------------------------- ----------------------------
 __configuration__
-`tls.config() -> conf`                            create a shared config object
-`conf:free()`                                     free the config object
-`conf:set{opt->val,{opt->val},...}`               set options in bulk
+`tls.config() -> conf`                                                             create a shared config object
+`conf:free()`                                                                      free the config object
+`conf:set{opt->val,{opt->val},...}`                                                set options in bulk
 `conf:add_keypair_file(cert_file, key_file, [staple_file])`
 `conf:add_keypair(cert, [cert_size], key, [key_size], [staple], [staple_size])`
 `conf:add_ticket_key(keyrev, key, [key_size])`
@@ -61,4 +61,4 @@ __operation__
 `ts:recv(buf, sz)`
 `ts:send(buf, sz)`
 `ts:close()`
-------------------------------------------------- ----------------------------
+---------------------------------------------------------------------------------- ----------------------------
