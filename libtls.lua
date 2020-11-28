@@ -1,4 +1,6 @@
 
+if not ... then require'http_server_test'; return end
+
 --libtls binding.
 --Written by Cosmin Apreutesei. Public Domain.
 
@@ -14,14 +16,14 @@ local function str(s) return s ~= nil and ffi.string(s) or nil end
 
 local config = {}
 
-function M.config(conf)
-	if ffi.istype('struct tls_config', conf) then
-		return conf --pass-through
+function M.config(t)
+	if ffi.istype('struct tls_config', t) then
+		return t --pass-through
 	end
 	local self = assert(ptr(C.tls_config_new()))
 	self:verify() --default, so `insecure_*` options must be set explicitly.
-	if conf then
-		local ok, err = self:set(conf)
+	if t then
+		local ok, err = self:set(t)
 		if not ok then
 			self:free()
 			error(err)
@@ -30,7 +32,9 @@ function M.config(conf)
 	return self, true
 end
 
-config.free = C.tls_config_free
+function config:free()
+	C.tls_config_free(self)
+end
 
 local function check(self, ret)
 	if ret == 0 then return true end
@@ -41,23 +45,57 @@ function config:add_keypair(cert, cert_size, key, key_size, staple, staple_size)
 	return check(self, C.tls_config_add_keypair_ocsp_mem(self,
 		cert, cert_size or #cert,
 		key, key_size or #key,
-		staple, staple_size or #staple))
+		staple, staple_size or (staple and #staple or 0)))
 end
 
 function config:set_alpn(alpn)
 	return check(self, C.tls_config_set_alpn(self, alpn))
 end
 
-function config:set_ca(ca, ca_size)
-	return check(self, C.tls_config_set_ca_mem(self, ca, ca_size or #ca))
+function config:set_ca(s, sz)
+	return check(self, C.tls_config_set_ca_mem(self, s, sz or #s))
+end
+
+function config:set_cert(s, sz)
+	return check(self, C.tls_config_set_cert_mem(self, s, sz or #s))
+end
+
+function config:set_key(s, sz)
+	return check(self, C.tls_config_set_key_mem(self, s, sz or #s))
+end
+
+function config:set_keypair(cert, cert_sz, key, key_sz)
+	return check(self, C.tls_config_set_keypair_mem(self, cert, cert_sz or #cert, key, key_sz or #key))
+end
+
+function config:set_ocsp_staple(s, sz)
+	return check(self, C.tls_config_set_ocsp_staple_mem(self, s, sz or #s))
+end
+
+function config:set_keypairs(t)
+	for _,t in ipairs(t) do
+		local ok, err = self:add_keypair(t.cert, t.cert_size, t.key, t.key_size, t.ocsp_staple, t.ocsp_staple_size)
+		if not ok then return nil, err end
+	end
+	return true
+end
+
+--NOTE: session tickets not supported by BearSSL.
+function config:set_ticket_keys(t)
+	for _,t in ipairs(t) do
+		local ok, err = self:add_ticket_key(t.ticket_key_rev, t.ticket_key, t.ticket_key_size)
+		if not ok then return nil, err end
+	end
+	return true
 end
 
 function config:add_ticket_key(keyrev, key, key_size)
 	return check(self, C.tls_config_add_ticket_key(self, keyrev, key, key_size or #key))
 end
 
-function config:set_ciphers(ciphers)
-	return check(self, C.tls_config_set_ciphers(self, ciphers))
+function config:set_ciphers(s)
+	s = s:gsub('^%s+', ''):gsub('%s+$', ''):gsub('%s+', ':')
+	return check(self, C.tls_config_set_ciphers(self, s))
 end
 
 function config:set_crl(crl, sz)
@@ -107,8 +145,9 @@ config.verify_client_optional = return_true(C.tls_config_verify_client_optional)
 config.clear_keys             = return_true(C.tls_config_clear_keys)
 
 local proto_buf = ffi.new'uint32_t[1]'
-function config:parse_protocols(protostr)
-	local ok, err = check(self, C.tls_config_parse_protocols(proto_buf, protostr))
+function config:parse_protocols(s)
+	s = s:gsub('^%s+', ''):gsub('%s+$', ''):gsub('%s+', ':')
+	local ok, err = check(self, C.tls_config_parse_protocols(proto_buf, s))
 	if not ok then return nil, err end
 	return proto_buf[0]
 end
@@ -131,8 +170,14 @@ do
 
 	local keys = {
 		{'ca'                    , config.set_ca, true},
+		{'cert'                  , config.set_cert, true},
+		{'key'                   , config.set_key, true},
+		{'ocsp_staple'           , config.set_ocsp_staple, true},
+		{'keypairs'              , config.set_keypairs},
+		{'ticket_keys'           , config.set_ticket_keys},
 		{'ciphers'               , config.set_ciphers},
 		{'alpn'                  , config.set_alpn},
+		--NOTE: DHE not supported by BearSSL (but supported by LibreSSL).
 		{'dheparams'             , config.set_dheparams},
 		{'ecdhecurve'            , config.set_ecdhecurve},
 		{'ecdhecurves'           , config.set_ecdhecurves},
@@ -155,23 +200,6 @@ do
 	}
 
 	function config:set(t)
-		if #t > 0 then
-			for _,t in ipairs(t) do
-				local ok, err = self:set(t)
-				if not ok then return nil, err end
-			end
-		end
-		if t.cert then
-			local ok, err = self:add_keypair(
-				t.cert, t.cert_size, t.key, t.key_size,
-				t.ocsp_staple, t.ocsp_staple_size)
-			if not ok then return nil, err end
-		end
-		if t.ticket_key then --NOTE: session tickets not supported by BearSSL.
-			local ok, err = self:add_ticket_key(
-				t.ticket_key_rev, t.ticket_key, t.ticket_key_size)
-			if not ok then return nil, err end
-		end
 		for i,kt in ipairs(keys) do
 			local k, set_method, is_str = unpack(kt)
 			local v = t[k]
@@ -183,6 +211,7 @@ do
 		end
 		return true
 	end
+
 end
 
 ffi.metatype('struct tls_config', {__index = config})
@@ -194,11 +223,13 @@ end
 
 local tls = {}
 
-function tls:configure(conf)
-	if conf then
-		local conf, created = M.config(conf)
+function tls:configure(t)
+	if t then
+		local conf, created = M.config(t)
 		local ok, err = check(self, C.tls_configure(self, conf))
-		if created then conf:free() end --self holds the only ref now.
+		if created then
+			conf:free() --self holds the only ref to conf now.
+		end
 		assert(ok, err)
 	end
 	return self
@@ -221,8 +252,11 @@ function tls:free()
 	C.tls_free(self)
 end
 
-function tls:accept(cctx, read_cb, write_cb, cb_arg)
-	return check(self, C.tls_accept_cbs(self, cctx, read_cb, write_cb, cb_arg))
+local ctls_buf = ffi.new'struct tls*[1]'
+function tls:accept(read_cb, write_cb, cb_arg)
+	local ok, err = check(self, C.tls_accept_cbs(self, ctls_buf, read_cb, write_cb, cb_arg))
+	if not ok then return nil, err end
+	return ctls_buf[0]
 end
 
 function tls:connect(vhost, read_cb, write_cb, cb_arg)

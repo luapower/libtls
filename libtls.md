@@ -20,14 +20,14 @@ __configuration__
 `tls.config() -> conf`                                                             create a shared config object
 `conf:free()`                                                                      free the config object
 `conf:set{opt->val,{opt->val},...}`                                                set options in bulk
-`conf:add_keypair_file(cert_file, key_file, [staple_file])`
 `conf:add_keypair(cert, [cert_size], key, [key_size], [staple], [staple_size])`
 `conf:add_ticket_key(keyrev, key, [key_size])`
 `conf:clear_keys()`
 `conf:set_alpn(alpn)`
-`conf:set_ca_file(ca_file)`
-`conf:set_ca_path(ca_path)`
 `conf:set_ca(ca, [ca_size])`
+`conf:set_key(key, [key_size])`
+`conf:set_cert(cert, [cert_size])`
+`conf:set_ocsp_staple(staple, [staple_size])`
 `conf:set_ciphers(ciphers)`
 `conf:set_crl_file(file)`
 `conf:set_crl(crl, sz)`
@@ -56,7 +56,7 @@ __operation__
 `ts:configure(conf)`
 `ts:reset(conf)`
 `ts:free()`
-`ts:accept(cctx, read_cb, write_cb, cb_arg)`
+`ts:accept(read_cb, write_cb, cb_arg) -> cts`
 `ts:connect(vhost, read_cb, write_cb, cb_arg)`
 `ts:recv(buf, sz)`
 `ts:send(buf, sz)`
