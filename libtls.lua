@@ -11,6 +11,8 @@ require'libtls_h'
 local C = ffi.load(ffi.tls_libname or 'tls_bearssl')
 local M = {C = C}
 
+M.debug = function() end
+
 local function ptr(p) return p ~= nil and p or nil end
 local function str(s) return s ~= nil and ffi.string(s) or nil end
 
@@ -64,18 +66,32 @@ function config:set_key(s, sz)
 	return check(self, C.tls_config_set_key_mem(self, s, sz or #s))
 end
 
-function config:set_keypair(cert, cert_sz, key, key_sz)
-	return check(self, C.tls_config_set_keypair_mem(self, cert, cert_sz or #cert, key, key_sz or #key))
-end
-
 function config:set_ocsp_staple(s, sz)
 	return check(self, C.tls_config_set_ocsp_staple_mem(self, s, sz or #s))
 end
 
 function config:set_keypairs(t)
-	for _,t in ipairs(t) do
-		local ok, err = self:add_keypair(t.cert, t.cert_size, t.key, t.key_size, t.ocsp_staple, t.ocsp_staple_size)
-		if not ok then return nil, err end
+	for i,t in ipairs(t) do
+		if i == 1 then
+			if t.cert then
+				local ok, err = self:set_cert(t.cert, t.cert_size)
+				if not ok then return nil, err end
+			end
+			if t.key then
+				local ok, err = self:set_key(t.key, t.key_size)
+				if not ok then return nil, err end
+			end
+			if t.ocsp_staple then
+				local ok, err = self:set_ocsp_staple(t.ocsp_staple, t.ocsp_staple_size)
+				if not ok then return nil, err end
+			end
+		else
+			local ok, err = self:add_keypair(
+				t.cert, t.cert_size,
+				t.key, t.key_size,
+				t.ocsp_staple, t.ocsp_staple_size)
+			if not ok then return nil, err end
+		end
 	end
 	return true
 end
@@ -199,7 +215,32 @@ do
 		{'session_lifetime'      , config.set_session_lifetime},
 	}
 
-	function config:set(t)
+	local function load_files(t, loadfile)
+		for k,v in pairs(t) do
+			if glue.ends(k, '_file') then
+				t[k:gsub('_file$', '')] = assert(loadfile(v))
+				t[k] = nil
+			end
+		end
+	end
+
+	function config:set(t1)
+
+		local loadfile = t1.loadfile
+		local t = {}
+		for k,v in pairs(t1) do t[k] = v end
+		load_files(t, loadfile)
+		if t.keypairs then
+			for i,t in ipairs(t.keypairs) do
+				load_files(t, loadfile)
+			end
+		end
+		if t.ticket_keys then
+			for i,t in ipairs(t.ticket_keys) do
+				load_files(t, loadfile)
+			end
+		end
+
 		for i,kt in ipairs(keys) do
 			local k, set_method, is_str = unpack(kt)
 			local v = t[k]
@@ -207,6 +248,8 @@ do
 				local sz = is_str and (t[k..'_size'] or #v) or nil
 				local ok, err = set_method(self, v, sz)
 				if not ok then return nil, err end
+				M.debug(('tls config %-25s %s'):format(k,
+					tostring(v):gsub('^%s+', ''):gsub('\r?\n%s*', ' \\n ')))
 			end
 		end
 		return true
@@ -280,7 +323,7 @@ function tls:send(buf, sz)
 end
 
 function tls:close()
-	return check(self, C.tls_close(self))
+	return checklen(self, C.tls_close(self))
 end
 
 ffi.metatype('struct tls', {__index = tls})
