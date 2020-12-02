@@ -323,7 +323,9 @@ function tls:send(buf, sz)
 end
 
 function tls:close()
-	return checklen(self, C.tls_close(self))
+	local len, err = checklen(self, C.tls_close(self))
+	if not len then return nil, err end
+	return true
 end
 
 ffi.metatype('struct tls', {__index = tls})
