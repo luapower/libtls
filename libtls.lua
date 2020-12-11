@@ -8,7 +8,7 @@ if not ... then require'libtls_test'; return end
 
 local ffi = require'ffi'
 require'libtls_h'
-local C = ffi.load(ffi.tls_libname or 'tls_bearssl')
+local C = ffi.load(ffi.tls_libname or 'tls')
 local M = {C = C}
 
 M.debug = function() end
@@ -218,7 +218,8 @@ do
 	local function load_files(t, loadfile)
 		for k,v in pairs(t) do
 			if glue.ends(k, '_file') then
-				t[k:gsub('_file$', '')] = assert(loadfile(v))
+				--NOTE: bearssl doesn't handle CRLF.
+				t[k:gsub('_file$', '')] = assert(loadfile(v)):gsub('\r', '')
 				t[k] = nil
 			end
 		end
